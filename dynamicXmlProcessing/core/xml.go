@@ -1,7 +1,7 @@
 /**
 @author: Vikas K
 **/
-package main
+package core
 
 import (
 	"encoding/xml"
