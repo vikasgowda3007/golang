@@ -1,3 +1,6 @@
+/**
+@author: Vikas K
+**/
 package core
 
 import (
@@ -26,14 +29,16 @@ var xmlRaw = `
 	</amenities>
 </campground>`
 
-func TestXML(t *testing.T) {
-	finalMap, err := PreFinal(xmlRaw, ">")
+func TestGetXmlMap(t *testing.T) {
+	receivingXmlMap, err := GetXmlMap(xmlRaw, "->")
 	if err != nil {
 		log.Println("Err: ", err)
-	} else if finalMap == nil {
+		return
+	} else if receivingXmlMap == nil {
+		log.Println("Received nil xml map")
 		return
 	}
-	for key, value := range finalMap {
+	for key, value := range receivingXmlMap {
 		log.Println(key, " > ", value)
 	}
 }
