@@ -2,6 +2,7 @@ package test
 
 import (
 	"../core"
+	"github.com/vikasgowda3007/golang/dynamicXmlProcessing/core"
 	"log"
 	"testing"
 )
