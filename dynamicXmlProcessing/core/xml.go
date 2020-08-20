@@ -1,8 +1,12 @@
-package core
+/**
+@author: Vikas K
+**/
+package main
 
 import (
 	"encoding/xml"
 	"errors"
+	"log"
 	"strings"
 )
 
@@ -13,7 +17,7 @@ type xmlTestMap struct {
 // unparsedTagMap contains the tag information
 type unparsedTagMap struct {
 	XMLName     xml.Name
-	FullContent string `xml:",innerxml"` // for debug purpose, allow to see what's inside some tags
+	FullContent string `xml:",innerxml"`
 }
 
 // unparsedTagsMap store tags not handled by Unmarshal in a map, it should be labelled with `xml",any"`
@@ -24,10 +28,13 @@ var (
 	separator string
 )
 
-func PreFinal(xmlStr string, sep string) (map[string]string, error) {
+// GetXmlMap accepts a xml string a the first parameter and a separator as the second parameter.
+// Will return a map of xml data where recursive xml tag keys are separated by separator passed as parameter.
+// If processing is unsuccessful xmlMap will be set to nil and err is returned.
+func GetXmlMap(xmlStr string, sep string) (xmlMap map[string]string, err error) {
 	var xmlStructMapMain xmlTestMap
 	separator = sep
-	err := xml.Unmarshal([]byte("<d>"+xmlStr+"</d>"), &xmlStructMapMain)
+	err = xml.Unmarshal([]byte("<dummy>"+xmlStr+"</dummy>"), &xmlStructMapMain)
 	if err != nil {
 		return nil, err
 	}
@@ -47,14 +54,14 @@ func PreFinal(xmlStr string, sep string) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = makeFinalMap(xmlStructMapMain.Unparsed, mainTag)
+	err = recursive(xmlStructMapMain.Unparsed, mainTag)
 	if err != nil {
 		return nil, err
 	}
 	return finalMap, nil
 }
 
-func makeFinalMap(unparsed unparsedTagsMap, mainTag string) error {
+func recursive(unparsed unparsedTagsMap, mainTag string) error {
 	for key, value := range unparsed {
 		if len(value) > 0 && key != "" {
 			if strings.Contains(value, "<") {
@@ -63,7 +70,7 @@ func makeFinalMap(unparsed unparsedTagsMap, mainTag string) error {
 				if err != nil {
 					return err
 				}
-				errRec := makeFinalMap(xmlStructMapRec.Unparsed, mainTag+separator+key)
+				errRec := recursive(xmlStructMapRec.Unparsed, mainTag+separator+key)
 				if errRec != nil {
 					return errRec
 				}
