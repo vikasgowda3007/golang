@@ -7,26 +7,26 @@ import (
 )
 
 type xmlTestMap struct {
-	Unparsed UnparsedTagsMap `xml:",any"`
+	Unparsed unparsedTagsMap `xml:",any"`
 }
 
-// UnparsedTagMap contains the tag information
-type UnparsedTagMap struct {
+// unparsedTagMap contains the tag information
+type unparsedTagMap struct {
 	XMLName     xml.Name
 	FullContent string `xml:",innerxml"` // for debug purpose, allow to see what's inside some tags
 }
 
-// UnparsedTagsMap store tags not handled by Unmarshal in a map, it should be labelled with `xml",any"`
-type UnparsedTagsMap map[string]string
+// unparsedTagsMap store tags not handled by Unmarshal in a map, it should be labelled with `xml",any"`
+type unparsedTagsMap map[string]string
 
 var (
-	finalMap = make(map[string]string)
-	sepp     string
+	finalMap  = make(map[string]string)
+	separator string
 )
 
 func PreFinal(xmlStr string, sep string) (map[string]string, error) {
 	var xmlStructMapMain xmlTestMap
-	sepp = sep
+	separator = sep
 	err := xml.Unmarshal([]byte("<d>"+xmlStr+"</d>"), &xmlStructMapMain)
 	if err != nil {
 		return nil, err
@@ -39,7 +39,9 @@ func PreFinal(xmlStr string, sep string) (map[string]string, error) {
 		mainTag = key
 		break
 	}
-
+	if mainTag == "" {
+		return nil, errors.New("wrong XML input : invalid tag name")
+	}
 	xmlStructMapMain.Unparsed = nil
 	err = xml.Unmarshal([]byte(xmlStr), &xmlStructMapMain)
 	if err != nil {
@@ -52,7 +54,7 @@ func PreFinal(xmlStr string, sep string) (map[string]string, error) {
 	return finalMap, nil
 }
 
-func makeFinalMap(unparsed UnparsedTagsMap, mainTag string) error {
+func makeFinalMap(unparsed unparsedTagsMap, mainTag string) error {
 	for key, value := range unparsed {
 		if len(value) > 0 && key != "" {
 			if strings.Contains(value, "<") {
@@ -61,13 +63,13 @@ func makeFinalMap(unparsed UnparsedTagsMap, mainTag string) error {
 				if err != nil {
 					return err
 				}
-				errRec := makeFinalMap(xmlStructMapRec.Unparsed, mainTag+sepp+key)
+				errRec := makeFinalMap(xmlStructMapRec.Unparsed, mainTag+separator+key)
 				if errRec != nil {
 					return errRec
 				}
 			} else {
 				if mainTag != "" {
-					finalMap[mainTag+sepp+key] = value
+					finalMap[mainTag+separator+key] = value
 				}
 			}
 		}
@@ -75,17 +77,17 @@ func makeFinalMap(unparsed UnparsedTagsMap, mainTag string) error {
 	return nil
 }
 
-func (u *UnparsedTagsMap) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+func (u *unparsedTagsMap) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	if *u == nil {
-		*u = UnparsedTagsMap{}
+		*u = unparsedTagsMap{}
 	}
-	e := UnparsedTagMap{}
+	e := unparsedTagMap{}
 	err := d.DecodeElement(&e, &start)
 	if err != nil {
 		return err
 	}
 	//if _, ok := (*u)[e.XMLName.Local]; ok {
-	//	return fmt.Errorf("UnparsedTagsMap: UnmarshalXML: Tag %s:  multiple entries with the same name", e.XMLName.Local)
+	//	return fmt.Errorf("unparsedTagsMap: UnmarshalXML: Tag %s:  multiple entries with the same name", e.XMLName.Local)
 	//}
 	(*u)[e.XMLName.Local] = e.FullContent
 	return nil
