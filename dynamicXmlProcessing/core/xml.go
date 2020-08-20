@@ -1,33 +1,10 @@
-package main
+package core
 
 import (
 	"encoding/xml"
 	"errors"
-	"fmt"
-	"log"
 	"strings"
 )
-
-var xmlRaw = `
-<campground type="PUBLIC">
-<name>vikas</name>
-	<address>
-		<street>2585 Park Rd 6026</street>
-		<city>Johnson City</city>
-		<state>TX</state>
-		<zip>78636</zip>
-	</address>
-	<amenities>
-		<amenity>
-			<distance>Within Facility</distance>
-			<name>Biking</name>
-		</amenity>
-		<amenity>
-			<distance>Within Facility</distance>
-			<name>Kayaking</name>
-		</amenity>
-	</amenities>
-</campground>`
 
 type xmlTestMap struct {
 	Unparsed UnparsedTagsMap `xml:",any"`
@@ -42,28 +19,22 @@ type UnparsedTagMap struct {
 // UnparsedTagsMap store tags not handled by Unmarshal in a map, it should be labelled with `xml",any"`
 type UnparsedTagsMap map[string]string
 
-var finalMap = make(map[string]string)
-var mainTag = ""
+var (
+	finalMap = make(map[string]string)
+	sepp     string
+)
 
-func main() {
-	err := preFinal(xmlRaw)
-	if err != nil {
-		log.Println(err)
-	}
-	for key, value := range finalMap {
-		fmt.Println(key, " > ", value)
-	}
-}
-
-func preFinal(xmlStr string) error {
+func PreFinal(xmlStr string, sep string) (map[string]string, error) {
 	var xmlStructMapMain xmlTestMap
+	sepp = sep
 	err := xml.Unmarshal([]byte("<d>"+xmlStr+"</d>"), &xmlStructMapMain)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if len(xmlStructMapMain.Unparsed) > 1 {
-		return errors.New("wrong XML input")
+		return nil, errors.New("wrong XML input")
 	}
+	mainTag := ""
 	for key := range xmlStructMapMain.Unparsed {
 		mainTag = key
 		break
@@ -72,13 +43,13 @@ func preFinal(xmlStr string) error {
 	xmlStructMapMain.Unparsed = nil
 	err = xml.Unmarshal([]byte(xmlStr), &xmlStructMapMain)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	err = makeFinalMap(xmlStructMapMain.Unparsed, mainTag)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return finalMap, nil
 }
 
 func makeFinalMap(unparsed UnparsedTagsMap, mainTag string) error {
@@ -86,18 +57,17 @@ func makeFinalMap(unparsed UnparsedTagsMap, mainTag string) error {
 		if len(value) > 0 && key != "" {
 			if strings.Contains(value, "<") {
 				var xmlStructMapRec xmlTestMap
-				mainTag = mainTag + ">" + key
 				err := xml.Unmarshal([]byte("<"+key+">"+value+"</"+key+">"), &xmlStructMapRec)
 				if err != nil {
 					return err
 				}
-				errRec := makeFinalMap(xmlStructMapRec.Unparsed, mainTag)
+				errRec := makeFinalMap(xmlStructMapRec.Unparsed, mainTag+sepp+key)
 				if errRec != nil {
 					return errRec
 				}
 			} else {
 				if mainTag != "" {
-					finalMap[mainTag+">"+key] = value
+					finalMap[mainTag+sepp+key] = value
 				}
 			}
 		}
