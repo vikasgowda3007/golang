@@ -6,7 +6,6 @@ package core
 import (
 	"encoding/xml"
 	"errors"
-	"log"
 	"strings"
 )
 
